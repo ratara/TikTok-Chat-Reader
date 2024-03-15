@@ -63,7 +63,10 @@ io.on('connection', (socket) => {
         // Redirect message events
         tiktokConnectionWrapper.connection.on('roomUser', msg => socket.emit('roomUser', msg));
         tiktokConnectionWrapper.connection.on('member', msg => socket.emit('member', msg));
-        tiktokConnectionWrapper.connection.on('chat', msg => socket.emit('chat', msg));
+        tiktokConnectionWrapper.connection.on('chat', msg => {
+            socket.emit('chat', msg);
+            writeToFile(msg);
+        });
         tiktokConnectionWrapper.connection.on('gift', msg => socket.emit('gift', msg));
         tiktokConnectionWrapper.connection.on('social', msg => socket.emit('social', msg));
         tiktokConnectionWrapper.connection.on('like', msg => socket.emit('like', msg));
@@ -83,6 +86,18 @@ io.on('connection', (socket) => {
     });
 });
 
+function writeToFile(msg){
+    const fs = require('fs');
+
+    try {
+        // fs.writeFile('/home/ralf/Dokumente/work/test.txt', content);
+        fs.appendFileSync('/home/ralf/Dokumente/work/test.txt', msg.comment + "\n");
+        console.info("Wrote successfully to file");
+    } catch (err) {
+        console.error("Failed to write to file: "+ err);
+    }
+}
+
 // Emit global connection statistics
 setInterval(() => {
     io.emit('statistic', { globalConnectionCount: getGlobalConnectionCount() });
@@ -92,6 +107,6 @@ setInterval(() => {
 app.use(express.static('public'));
 
 // Start http listener
-const port = process.env.PORT || 8081;
+const port = process.env.PORT || 8082;
 httpServer.listen(port);
 console.info(`Server running! Please visit http://localhost:${port}`);
