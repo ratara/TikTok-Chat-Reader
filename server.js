@@ -8,6 +8,9 @@ const { clientBlocked } = require('./limiter');
 
 const app = express();
 const httpServer = createServer(app);
+// global file path prefix that is used within a session to log different
+// files with the same prefix. timestamp_streamer_<eventtype>
+let filePath = "";
 
 // Enable cross origin resource sharing
 const io = new Server(httpServer, {
@@ -16,13 +19,33 @@ const io = new Server(httpServer, {
     }
 });
 
+/**
+ * Formats the given timestamp into a string representation for a file name.
+ * @param {Date} the timestamp
+ * @returns {string} the string formated timestamp
+ */
+function formatDateTime(date)
+{
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day}_${hours}_${minutes}_${seconds}`;
+}
 
 io.on('connection', (socket) => {
     let tiktokConnectionWrapper;
-
+    
     console.info('New connection from origin', socket.handshake.headers['origin'] || socket.handshake.headers['referer']);
 
     socket.on('setUniqueId', (uniqueId, options) => {
+        
+        // generate file path prefix for this session
+        const time = new Date();
+        filePath = "/home/ralf/Dokumente/work/" + formatDateTime(time) + "_" + uniqueId;
 
         // Prohibit the client from specifying these options (for security reasons)
         if (typeof options === 'object' && options) {
@@ -65,11 +88,17 @@ io.on('connection', (socket) => {
         tiktokConnectionWrapper.connection.on('member', msg => socket.emit('member', msg));
         tiktokConnectionWrapper.connection.on('chat', msg => {
             socket.emit('chat', msg);
-            writeToFile(msg);
+            writeChatEventToFile(msg);
         });
-        tiktokConnectionWrapper.connection.on('gift', msg => socket.emit('gift', msg));
+        tiktokConnectionWrapper.connection.on('gift', msg => {
+            socket.emit('gift', msg);
+            writeGiftEventToFile(msg);
+        });
         tiktokConnectionWrapper.connection.on('social', msg => socket.emit('social', msg));
-        tiktokConnectionWrapper.connection.on('like', msg => socket.emit('like', msg));
+        tiktokConnectionWrapper.connection.on('like', msg => {
+            socket.emit('like', msg);
+            writeLikeEventToFile(msg);
+        });
         tiktokConnectionWrapper.connection.on('questionNew', msg => socket.emit('questionNew', msg));
         tiktokConnectionWrapper.connection.on('linkMicBattle', msg => socket.emit('linkMicBattle', msg));
         tiktokConnectionWrapper.connection.on('linkMicArmies', msg => socket.emit('linkMicArmies', msg));
@@ -86,17 +115,67 @@ io.on('connection', (socket) => {
     });
 });
 
-function writeToFile(msg){
+//------------------------------------------------------------------------------
+
+/** 
+ * Logs a chat event to file.
+ * @param chatEvent {object} tiktok chat event
+ */
+function writeChatEventToFile(chatEvent){
     const fs = require('fs');
 
     try {
-        // fs.writeFile('/home/ralf/Dokumente/work/test.txt', content);
-        fs.appendFileSync('/home/ralf/Dokumente/work/test.txt', msg.comment + "\n");
-        console.info("Wrote successfully to file");
+        fs.appendFileSync(
+            filePath + '_chat.txt',
+            `${chatEvent.uniqueId};${chatEvent.nickname};${chatEvent.comment}\n`
+        );
     } catch (err) {
         console.error("Failed to write to file: "+ err);
     }
 }
+
+//------------------------------------------------------------------------------
+
+/** 
+ * Logs a gift event to file.
+ * @param giftEvent {object} tiktok chat event
+ */
+function writeGiftEventToFile(giftEvent){
+    const fs = require('fs');
+
+    try {
+        if (giftEvent.gift.repeat_end == 1)
+        {
+            fs.appendFileSync(
+                filePath + '_gift.txt',
+                `${giftEvent.uniqueId};${giftEvent.nickname};${giftEvent.diamondCount * giftEvent.gift.repeat_count}\n`
+            );
+        }
+    } catch (err) {
+        console.error("Failed to write to file: "+ err);
+    }
+}
+
+//------------------------------------------------------------------------------
+
+/** 
+ * Logs a gift event to file.
+ * @param likeEvent {object} tiktok chat event
+ */
+function writeLikeEventToFile(likeEvent){
+    const fs = require('fs');
+
+    try {
+        fs.appendFileSync(
+            filePath + '_like.txt',
+            `${likeEvent.uniqueId};${likeEvent.nickname};${likeEvent.likeCount}\n`
+        );
+    } catch (err) {
+        console.error("Failed to write to file: "+ err);
+    }
+}
+
+//------------------------------------------------------------------------------
 
 // Emit global connection statistics
 setInterval(() => {
