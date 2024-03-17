@@ -45,7 +45,8 @@ io.on('connection', (socket) => {
         
         // generate file path prefix for this session
         const time = new Date();
-        filePath = "/home/ralf/Dokumente/work/" + formatDateTime(time) + "_" + uniqueId;
+        const basePath = "/home/ralf/Dokumente/work/";
+        filePath = basePath + formatDateTime(time) + "_" + uniqueId;
 
         // Prohibit the client from specifying these options (for security reasons)
         if (typeof options === 'object' && options) {
