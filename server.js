@@ -145,11 +145,12 @@ function writeGiftEventToFile(giftEvent){
     const fs = require('fs');
 
     try {
-        if (giftEvent.gift.repeat_end == 1)
+        if ((giftEvent.giftType == 1  && giftEvent.gift.repeat_end == 1) || giftEvent.giftType != 1)
         {
             fs.appendFileSync(
                 filePath + '_gift.txt',
                 `${giftEvent.uniqueId};${giftEvent.nickname};${giftEvent.diamondCount * giftEvent.gift.repeat_count}\n`
+                // `${giftEvent.uniqueId};${giftEvent.nickname};Coins:${giftEvent.diamondCount * giftEvent.gift.repeat_count};repeat_end:${giftEvent.gift.repeat_end};gifttype:${giftEvent.giftType}\n`
             );
         }
     } catch (err) {
