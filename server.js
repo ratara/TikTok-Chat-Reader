@@ -146,7 +146,7 @@ function writeGiftEventToFile(giftEvent){
     const fs = require('fs');
 
     try {
-        if (giftEvent.gift.repeat_end == 1)
+        if ((giftEvent.giftType == 1  && giftEvent.gift.repeat_end == 1) || giftEvent.giftType != 1)
         {
             fs.appendFileSync(
                 filePath + '_gift.txt',
