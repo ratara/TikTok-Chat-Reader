@@ -5,6 +5,7 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const { TikTokConnectionWrapper, getGlobalConnectionCount } = require('./connectionWrapper');
 const { clientBlocked } = require('./limiter');
+const { time } = require('console');
 
 const app = express();
 const httpServer = createServer(app);
@@ -33,7 +34,7 @@ function formatDateTime(date)
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
 
-    return `${year}-${month}-${day}_${hours}_${minutes}_${seconds}`;
+    return `${year}_${month}_${day}_${hours}_${minutes}_${seconds}`;
 }
 
 io.on('connection', (socket) => {
@@ -45,7 +46,7 @@ io.on('connection', (socket) => {
         
         // generate file path prefix for this session
         const time = new Date();
-        const basePath = "/home/ralf/Dokumente/work/";
+        const basePath = "/Users/daniel/Desktop/PyCharm/scrape/";
         filePath = basePath + formatDateTime(time) + "_" + uniqueId;
 
         // Prohibit the client from specifying these options (for security reasons)
@@ -128,7 +129,7 @@ function writeChatEventToFile(chatEvent){
     try {
         fs.appendFileSync(
             filePath + '_chat.txt',
-            `${chatEvent.uniqueId};${chatEvent.nickname};${chatEvent.comment}\n`
+            `${chatEvent.uniqueId};${chatEvent.comment};${chatEvent.gifterLevel};${chatEvent.teamMemberLevel};${chatEvent.isSubscriber};${chatEvent.isModerator};${chatEvent.followInfo.followingCount};${chatEvent.followInfo.followerCount};${chatEvent.createTime}}\n`
         );
     } catch (err) {
         console.error("Failed to write to file: "+ err);
@@ -149,7 +150,7 @@ function writeGiftEventToFile(giftEvent){
         {
             fs.appendFileSync(
                 filePath + '_gift.txt',
-                `${giftEvent.uniqueId};${giftEvent.nickname};${giftEvent.diamondCount * giftEvent.gift.repeat_count}\n`
+                `${giftEvent.uniqueId};${giftEvent.giftName};${giftEvent.gift.gift_id};${giftEvent.diamondCount * giftEvent.gift.repeat_count}\n`
             );
         }
     } catch (err) {
@@ -187,6 +188,6 @@ setInterval(() => {
 app.use(express.static('public'));
 
 // Start http listener
-const port = process.env.PORT || 8082;
+const port = process.env.PORT || 8081;
 httpServer.listen(port);
 console.info(`Server running! Please visit http://localhost:${port}`);

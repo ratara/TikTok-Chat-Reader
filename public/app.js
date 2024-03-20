@@ -74,24 +74,94 @@ function isPendingStreak(data) {
 /**
  * Add a new message to the chat container
  */
+
+// <img class="miniprofilepicture" src="${data.profilePictureUrl}">
+
 function addChatItem(color, data, text, summarize) {
     let container = location.href.includes('obs.html') ? $('.eventcontainer') : $('.chatcontainer');
 
-    if (container.find('div').length > 500) {
-        container.find('div').slice(0, 200).remove();
+    // if (container.find('div').length > 500) {
+    //     container.find('div').slice(0, 200).remove();
+    // }
+
+    // container.find('.temporary').remove();;
+
+    function extractFollowInfoValues(followInfo) {
+        const filteredInfo = { ...followInfo };
+        // Unerwünschte Eigenschaften entfernen
+        delete filteredInfo.followStatus;
+        delete filteredInfo.pushStatus;
+
+        const values = Object.values(filteredInfo);
+        // Filtere leere oder nicht definierte Werte heraus
+        const filteredValues = values.filter(value => value !== null && value !== undefined && value !== '');
+        // Verbinde die Werte mit einem Semikolon
+        return filteredValues.join('; ');
     }
 
-    container.find('.temporary').remove();;
+    // Extrahiere die Werte aus dem followInfo-Objekt
+    const followInfoValues = extractFollowInfoValues(data.followInfo);
 
     container.append(`
         <div class=${summarize ? 'temporary' : 'static'}>
-            <img class="miniprofilepicture" src="${data.profilePictureUrl}">
             <span>
-                <b>${generateUsernameLink(data)}:</b> 
-                <span style="color:${color}">${sanitize(text)}</span>
+                <b>${data.uniqueId};</b> 
+                <span style="color:${color}"><b>${sanitize(text)};</b>${data.gifterLevel};${data.teamMemberLevel};${data.isSubscriber};${data.isModerator};${followInfoValues};${data.createTime}</span>
             </span>
         </div>
     `);
+
+    container.stop();
+    container.animate({
+        scrollTop: container[0].scrollHeight
+    }, 400);
+}
+
+
+function addLikeItem(data) {
+    let container = location.href.includes('obs.html') ? $('.eventcontainer') : $('.giftcontainer');
+
+    // if (container.find('div').length > 500) {
+    //     container.find('div').slice(0, 200).remove();
+    // }
+
+    // container.find('.temporary').remove();;
+
+    // Funktion zum Extrahieren der Werte aus dem followInfo-Objekt
+    function extractFollowInfoValues(followInfo) {
+        const filteredInfo = { ...followInfo };
+        // Unerwünschte Eigenschaften entfernen
+        delete filteredInfo.followStatus;
+        delete filteredInfo.pushStatus;
+
+        const values = Object.values(filteredInfo);
+        // Filtere leere oder nicht definierte Werte heraus
+        const filteredValues = values.filter(value => value !== null && value !== undefined && value !== '');
+        // Verbinde die Werte mit einem Semikolon
+        return filteredValues.join('; ');
+    }
+
+    // Extrahiere die Werte aus dem followInfo-Objekt
+    const followInfoValues = extractFollowInfoValues(data.followInfo);
+
+
+    let html = `
+    <div data-streakid=${isPendingStreak(data) ? streakId : ''}>
+            <div>
+                <table>
+                    <tr>
+                        <td>
+                            <span><b>${data.uniqueId}</b> <b>;${data.likeCount};${data.gifterLevel};${data.teamMemberLevel};${data.isSubscriber};${data.isModerator};${followInfoValues};${data.createTime}</b><span><br>
+                        </td>
+                    </tr>
+                </tabl>
+            </div>
+        </span>
+    </div>
+    `;
+
+    container.append(html);
+
 
     container.stop();
     container.animate({
@@ -105,25 +175,40 @@ function addChatItem(color, data, text, summarize) {
 function addGiftItem(data) {
     let container = location.href.includes('obs.html') ? $('.eventcontainer') : $('.giftcontainer');
 
-    if (container.find('div').length > 200) {
-        container.find('div').slice(0, 100).remove();
-    }
+    // if (container.find('div').length > 200) {
+    //     container.find('div').slice(0, 100).remove();
+    // }
+    // <td><img class="gifticon" src="${data.giftPictureUrl}"></td> <img class="miniprofilepicture" src="${data.profilePictureUrl}">  <span>${data.describe}
+    // <b style="${isPendingStreak(data) ? 'color:red' : ''}">;x${data.repeatCount.toLocaleString()}</b>   <b>;${(data.diamondCount * data.repeatCount).toLocaleString()}; Diamonds</b><span><br>
 
     let streakId = data.userId.toString() + '_' + data.giftId;
 
+    function extractFollowInfoValues(followInfo) {
+        const filteredInfo = { ...followInfo };
+        // Unerwünschte Eigenschaften entfernen
+        delete filteredInfo.followStatus;
+        delete filteredInfo.pushStatus;
+
+        const values = Object.values(filteredInfo);
+        // Filtere leere oder nicht definierte Werte heraus
+        const filteredValues = values.filter(value => value !== null && value !== undefined && value !== '');
+        // Verbinde die Werte mit einem Semikolon
+        return filteredValues.join('; ');
+    }
+
+    // Extrahiere die Werte aus dem followInfo-Objekt
+    const followInfoValues = extractFollowInfoValues(data.followInfo);
+
     let html = `
-        <div data-streakid=${isPendingStreak(data) ? streakId : ''}>
-            <img class="miniprofilepicture" src="${data.profilePictureUrl}">
-            <span>
-                <b>${generateUsernameLink(data)}:</b> <span>${data.describe}</span><br>
+        <div data-streakid="like-count">
                 <div>
                     <table>
                         <tr>
-                            <td><img class="gifticon" src="${data.giftPictureUrl}"></td>
                             <td>
-                                <span>Name: <b>${data.giftName}</b> (ID:${data.giftId})<span><br>
-                                <span>Repeat: <b style="${isPendingStreak(data) ? 'color:red' : ''}">x${data.repeatCount.toLocaleString()}</b><span><br>
-                                <span>Cost: <b>${(data.diamondCount * data.repeatCount).toLocaleString()} Diamonds</b><span>
+                                <span><b>${data.uniqueId};${data.giftName}</b> 
+                                (ID:${data.giftId})
+                                <b style="${isPendingStreak(data) ? 'color:red' : ''}">;x${data.repeatCount.toLocaleString()};${(data.diamondCount * data.repeatCount).toLocaleString()};${data.gifterLevel};${data.teamMemberLevel};${data.isSubscriber};${data.isModerator};${followInfoValues};${data.createTime}</b>
+                                <span><br>
                             </td>
                         </tr>
                     </tabl>
@@ -157,6 +242,7 @@ connection.on('roomUser', (msg) => {
 
 // like stats
 connection.on('like', (msg) => {
+    console.log(msg)
     if (typeof msg.totalLikeCount === 'number') {
         likeCount = msg.totalLikeCount;
         updateRoomStats();
@@ -165,26 +251,26 @@ connection.on('like', (msg) => {
     if (window.settings.showLikes === "0") return;
 
     if (typeof msg.likeCount === 'number') {
-        addChatItem('#447dd4', msg, msg.label.replace('{0:user}', '').replace('likes', `${msg.likeCount} likes`))
+        addLikeItem(msg)
     }
 })
 
-// Member join
-let joinMsgDelay = 0;
-connection.on('member', (msg) => {
-    if (window.settings.showJoins === "0") return;
+// // Member join
+// let joinMsgDelay = 0;
+// connection.on('member', (msg) => {
+//     if (window.settings.showJoins === "0") return;
 
-    let addDelay = 250;
-    if (joinMsgDelay > 500) addDelay = 100;
-    if (joinMsgDelay > 1000) addDelay = 0;
+//     let addDelay = 250;
+//     if (joinMsgDelay > 500) addDelay = 100;
+//     if (joinMsgDelay > 1000) addDelay = 0;
 
-    joinMsgDelay += addDelay;
+//     joinMsgDelay += addDelay;
 
-    setTimeout(() => {
-        joinMsgDelay -= addDelay;
-        addChatItem('#21b2c2', msg, 'joined', true);
-    }, joinMsgDelay);
-})
+//     setTimeout(() => {
+//         joinMsgDelay -= addDelay;
+//         addChatItem('#21b2c2', msg, 'joined', true);
+//     }, joinMsgDelay);
+// })
 
 // New chat comment received
 connection.on('chat', (msg) => {
@@ -197,6 +283,7 @@ connection.on('chat', (msg) => {
 connection.on('gift', (data) => {
     if (!isPendingStreak(data) && data.diamondCount > 0) {
         diamondsCount += (data.diamondCount * data.repeatCount);
+        
         updateRoomStats();
     }
 
@@ -206,12 +293,12 @@ connection.on('gift', (data) => {
 })
 
 // share, follow
-connection.on('social', (data) => {
-    if (window.settings.showFollows === "0") return;
+// connection.on('social', (data) => {
+//     if (window.settings.showFollows === "0") return;
 
-    let color = data.displayType.includes('follow') ? '#ff005e' : '#2fb816';
-    addChatItem(color, data, data.label.replace('{0:user}', ''));
-})
+//     let color = data.displayType.includes('follow') ? '#ff005e' : '#2fb816';
+//     addChatItem(color, data, data.label.replace('{0:user}', ''));
+// })
 
 connection.on('streamEnd', () => {
     $('#stateText').text('Stream ended.');
