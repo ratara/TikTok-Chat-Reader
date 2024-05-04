@@ -12,10 +12,6 @@ const app = express();
 let viewerCount = 0;
 let likeCount = 0;
 
-// global file path prefix that is used within a session to log different
-// files with the same prefix. timestamp_streamer_<eventtype>
-let filePath = "";
-
 /**
  * Formats the given timestamp into a string representation for a file name.
  * @param {Date} the timestamp
@@ -41,7 +37,7 @@ function scanHost(uniqueId)
         // generate file path prefix for this session
         const time = new Date();
         const basePath = "/Users/daniel/Desktop/PyCharm/scrape/sick/";
-        filePath = basePath + formatDateTime(time) + "_" + uniqueId;
+        let filePath = basePath + formatDateTime(time) + "_" + uniqueId;
 
         // Session ID in .env file is optional
         /* if (process.env.SESSIONID) {
@@ -89,22 +85,22 @@ function scanHost(uniqueId)
         // Enters the room
         tiktokConnectionWrapper.connection.on('member', msg => {
             //socket.emit('member', msg);
-            writeMemberEventToFile(msg);
+            writeMemberEventToFile(filePath, msg);
         });
         tiktokConnectionWrapper.connection.on('chat', msg => {
             //socket.emit('chat', msg);
-            writeChatEventToFile(msg);
+            writeChatEventToFile(filePath, msg);
         });
         tiktokConnectionWrapper.connection.on('gift', msg => {
             //socket.emit('gift', msg);
-            writeGiftEventToFile(msg);
+            writeGiftEventToFile(filePath, msg);
         });
         // Shares the Live
        /*  tiktokConnectionWrapper.connection.on('social', 
         msg => socket.emit('social', msg)); */
         // Likes the Live
         tiktokConnectionWrapper.connection.on('like', msg => {
-            writeLikeEventToFile(msg);
+            writeLikeEventToFile(filePath, msg);
             if (typeof msg.totalLikeCount === 'number') {
                 likeCount = msg.totalLikeCount;
             }
@@ -128,7 +124,7 @@ function scanHost(uniqueId)
  * Logs a chat event to file.
  * @param chatEvent {object} tiktok chat event
  */
-function writeChatEventToFile(chatEvent){
+function writeChatEventToFile(filePath, chatEvent){
     const fs = require('fs');
 
     try {
@@ -147,7 +143,7 @@ function writeChatEventToFile(chatEvent){
  * Logs a gift event to file.
  * @param giftEvent {object} tiktok gift event
  */
-function writeGiftEventToFile(giftEvent){
+function writeGiftEventToFile(filePath, giftEvent){
     const fs = require('fs');
 
     try {
@@ -169,7 +165,7 @@ function writeGiftEventToFile(giftEvent){
  * Logs a gift event to file.
  * @param likeEvent {object} tiktok like event
  */
-function writeLikeEventToFile(likeEvent){
+function writeLikeEventToFile(filePath, likeEvent){
     const fs = require('fs');
 
     try {
@@ -189,7 +185,7 @@ function writeLikeEventToFile(likeEvent){
  * Logs a chat event to file.
  * @param memberEvent {object} tiktok member event
  */
-function writeMemberEventToFile(memberEvent){
+function writeMemberEventToFile(filePath, memberEvent){
     const fs = require('fs');
 
     try {
@@ -227,5 +223,5 @@ function writeMemberEventToFile(memberEvent){
 app.use(express.static('public'));
 
 console.info(`Server running! I can see you!`);
-scanHost('uelmen_live');
 scanHost('netti_halt2007');
+scanHost('uelmen_live');
