@@ -9,6 +9,10 @@ const { time } = require('console');
 
 const app = express();
 const httpServer = createServer(app);
+
+let viewerCount = 0;
+let likeCount = 0;
+
 // global file path prefix that is used within a session to log different
 // files with the same prefix. timestamp_streamer_<eventtype>
 let filePath = "";
@@ -46,7 +50,7 @@ io.on('connection', (socket) => {
         
         // generate file path prefix for this session
         const time = new Date();
-        const basePath = "/Users/daniel/Desktop/PyCharm/scrape/";
+        const basePath = "/Users/daniel/Desktop/PyCharm/scrape/sick/";
         filePath = basePath + formatDateTime(time) + "_" + uniqueId;
 
         // Prohibit the client from specifying these options (for security reasons)
@@ -78,16 +82,35 @@ io.on('connection', (socket) => {
             return;
         }
 
+        // viewer stats
+        tiktokConnectionWrapper.connection.on('roomUser', (msg) => {
+            if (typeof msg.viewerCount === 'number') {
+                viewerCount = msg.viewerCount;
+            }
+        })
+
+         tiktokConnectionWrapper.connection.on('like', (msg) => {
+            if (typeof msg.totalLikeCount === 'number') {
+                likeCount = msg.totalLikeCount;
+            }
+         })
+
         // Redirect wrapper control events once
         tiktokConnectionWrapper.once('connected', state => socket.emit('tiktokConnected', state));
-        tiktokConnectionWrapper.once('disconnected', reason => socket.emit('tiktokDisconnected', reason));
+        tiktokConnectionWrapper.once('disconnected', reason => 
+        socket.emit('tiktokDisconnected', reason));
 
         // Notify client when stream ends
         tiktokConnectionWrapper.connection.on('streamEnd', () => socket.emit('streamEnd'));
 
         // Redirect message events
-        tiktokConnectionWrapper.connection.on('roomUser', msg => socket.emit('roomUser', msg));
-        tiktokConnectionWrapper.connection.on('member', msg => socket.emit('member', msg));
+        tiktokConnectionWrapper.connection.on('roomUser', msg => 
+        socket.emit('roomUser', msg));
+        // Enters the room
+        tiktokConnectionWrapper.connection.on('member', msg => {
+            socket.emit('member', msg);
+            writeMemberEventToFile(msg);
+        });
         tiktokConnectionWrapper.connection.on('chat', msg => {
             socket.emit('chat', msg);
             writeChatEventToFile(msg);
@@ -96,16 +119,25 @@ io.on('connection', (socket) => {
             socket.emit('gift', msg);
             writeGiftEventToFile(msg);
         });
-        tiktokConnectionWrapper.connection.on('social', msg => socket.emit('social', msg));
+        // Shares the Live
+        tiktokConnectionWrapper.connection.on('social', 
+        msg => socket.emit('social', msg));
+        // Likes the Live
         tiktokConnectionWrapper.connection.on('like', msg => {
             socket.emit('like', msg);
             writeLikeEventToFile(msg);
+            if (typeof msg.totalLikeCount === 'number') {
+                likeCount = msg.totalLikeCount;
+            }
         });
         tiktokConnectionWrapper.connection.on('questionNew', msg => socket.emit('questionNew', msg));
         tiktokConnectionWrapper.connection.on('linkMicBattle', msg => socket.emit('linkMicBattle', msg));
         tiktokConnectionWrapper.connection.on('linkMicArmies', msg => socket.emit('linkMicArmies', msg));
+        // Live Intro / About Me
         tiktokConnectionWrapper.connection.on('liveIntro', msg => socket.emit('liveIntro', msg));
-        tiktokConnectionWrapper.connection.on('emote', msg => socket.emit('emote', msg));
+        tiktokConnectionWrapper.connection.on('emote', msg => 
+        socket.emit('emote', msg));
+        // Kiste
         tiktokConnectionWrapper.connection.on('envelope', msg => socket.emit('envelope', msg));
         tiktokConnectionWrapper.connection.on('subscribe', msg => socket.emit('subscribe', msg));
     });
@@ -128,8 +160,8 @@ function writeChatEventToFile(chatEvent){
 
     try {
         fs.appendFileSync(
-            filePath + '_chat.txt',
-            `${chatEvent.uniqueId};${chatEvent.comment};${chatEvent.gifterLevel};${chatEvent.teamMemberLevel};${chatEvent.isSubscriber};${chatEvent.isModerator};${chatEvent.followInfo.followingCount};${chatEvent.followInfo.followerCount};${chatEvent.createTime}}\n`
+            filePath + '_chat.csv',
+            `${chatEvent.uniqueId}%${chatEvent.nickname}%${chatEvent.comment}%${chatEvent.gifterLevel}%${chatEvent.teamMemberLevel}%${chatEvent.isSubscriber}%${chatEvent.isModerator}%${chatEvent.followInfo.followingCount}%${chatEvent.followInfo.followerCount}%${chatEvent.createTime}%${viewerCount}%${likeCount}\n`
         );
     } catch (err) {
         console.error("Failed to write to file: "+ err);
@@ -140,7 +172,7 @@ function writeChatEventToFile(chatEvent){
 
 /** 
  * Logs a gift event to file.
- * @param giftEvent {object} tiktok chat event
+ * @param giftEvent {object} tiktok gift event
  */
 function writeGiftEventToFile(giftEvent){
     const fs = require('fs');
@@ -149,8 +181,8 @@ function writeGiftEventToFile(giftEvent){
         if ((giftEvent.giftType == 1  && giftEvent.gift.repeat_end == 1) || giftEvent.giftType != 1)
         {
             fs.appendFileSync(
-                filePath + '_gift.txt',
-                `${giftEvent.uniqueId};${giftEvent.giftName};${giftEvent.gift.gift_id};${giftEvent.diamondCount * giftEvent.gift.repeat_count}\n`
+                filePath + '_gift.csv',
+                `${giftEvent.uniqueId}%${giftEvent.nickname}%${giftEvent.giftName}%(${giftEvent.gift.gift_id})%${giftEvent.diamondCount}%x${giftEvent.gift.repeat_count}%${giftEvent.diamondCount * giftEvent.gift.repeat_count}%${giftEvent.gifterLevel}%${giftEvent.teamMemberLevel}%${giftEvent.isSubscriber}%${giftEvent.isModerator}%${giftEvent.followInfo.followingCount}%${giftEvent.followInfo.followerCount}%${giftEvent.createTime}%${viewerCount}%${likeCount}\n`
             );
         }
     } catch (err) {
@@ -162,22 +194,63 @@ function writeGiftEventToFile(giftEvent){
 
 /** 
  * Logs a gift event to file.
- * @param likeEvent {object} tiktok chat event
+ * @param likeEvent {object} tiktok like event
  */
 function writeLikeEventToFile(likeEvent){
     const fs = require('fs');
 
     try {
         fs.appendFileSync(
-            filePath + '_like.txt',
-            `${likeEvent.uniqueId};${likeEvent.nickname};${likeEvent.likeCount}\n`
+            filePath + '_like.csv',
+            `${likeEvent.uniqueId}%${likeEvent.nickname}%${likeEvent.likeCount}%${likeEvent.gifterLevel}%${likeEvent.teamMemberLevel}%${likeEvent.isSubscriber}%${likeEvent.isModerator}%${likeEvent.followInfo.followingCount}%${likeEvent.followInfo.followerCount}%${likeEvent.totalLikeCount}%${likeEvent.createTime}%${viewerCount}%${likeCount}\n`
         );
     } catch (err) {
         console.error("Failed to write to file: "+ err);
     }
 }
 
+
 //------------------------------------------------------------------------------
+
+/** 
+ * Logs a chat event to file.
+ * @param memberEvent {object} tiktok member event
+ */
+function writeMemberEventToFile(memberEvent){
+    const fs = require('fs');
+
+    try {
+        fs.appendFileSync(
+            filePath + '_member.csv',
+            `${memberEvent.uniqueId}%${memberEvent.nickname}%${memberEvent.displayType}%${memberEvent.createTime}%${viewerCount}%${likeCount}\n`
+        );
+    } catch (err) {
+        console.error("Failed to write to file: "+ err);
+    }
+}
+
+/** 
+ * Logs a gift event to file.
+// * {object} tiktok member event
+ */
+
+//function writeMemberEventToFile(memberEvent){
+//    const fs = require('fs');
+
+//    try {
+//        fs.appendFileSync(
+//            filePath + '_user.csv',
+//            `${userEvent.uniqueId}%${likeEvent.nickname}%${userEvent.displayType}%${userEvent.label}%${userEvent.actionId}\n`
+//        );
+//    } catch (err) {
+//        console.error("Failed to write to file: "+ err);
+//    }
+// }
+
+
+//------------------------------------------------------------------------------
+
+
 
 // Emit global connection statistics
 setInterval(() => {
@@ -188,6 +261,6 @@ setInterval(() => {
 app.use(express.static('public'));
 
 // Start http listener
-const port = process.env.PORT || 8081;
+const port = process.env.PORT || 8089;
 httpServer.listen(port);
 console.info(`Server running! Please visit http://localhost:${port}`);

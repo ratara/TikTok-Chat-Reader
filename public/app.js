@@ -105,8 +105,7 @@ function addChatItem(color, data, text, summarize) {
     container.append(`
         <div class=${summarize ? 'temporary' : 'static'}>
             <span>
-                <b>${data.uniqueId};</b> 
-                <span style="color:${color}"><b>${sanitize(text)};</b>${data.gifterLevel};${data.teamMemberLevel};${data.isSubscriber};${data.isModerator};${followInfoValues};${data.createTime}</span>
+                <span style="color:${color}"><b>${data.nickname};${sanitize(text)};</b>${data.gifterLevel};${data.teamMemberLevel};${data.isSubscriber};${data.isModerator};${followInfoValues};${data.uniqueId};${data.createTime}</span>
             </span>
         </div>
     `);
@@ -151,7 +150,7 @@ function addLikeItem(data) {
                 <table>
                     <tr>
                         <td>
-                            <span><b>${data.uniqueId}</b> <b>;${data.likeCount};${data.gifterLevel};${data.teamMemberLevel};${data.isSubscriber};${data.isModerator};${followInfoValues};${data.createTime}</b><span><br>
+                            <span><b>${data.uniqueId}</b><b>;${data.likeCount};${data.gifterLevel};${data.teamMemberLevel};${data.isSubscriber};${data.isModerator};${data.followInfo.followingCount};${data.followInfo.followerCount};${data.createTime}</b><span><br>
                         </td>
                     </tr>
                 </tabl>
