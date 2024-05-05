@@ -1,12 +1,14 @@
 body {
     font-family:Arial, Helvetica, sans-serif;
     min-width: 800px;
+    background-color: #000;
 }
 
 h1 {
     font-size: 1.8em;
     margin-top: 0px;
     margin-bottom: 0px;
+    color: #fff;
 }
 
 a {
@@ -15,30 +17,36 @@ a {
 
 .head {
     margin-bottom: 15px;
+    color: #fff;
 }
 
 .subTitle {
     font-size: 0.8em;
     font-weight: bold;
+    color: #fff;
 }
 
 .usernamelink {
     color: #18508f;
     text-decoration: none;
+    color: #fff;
 }
 
 #roomUserText {
     width: 100%;
     text-align: right;
+    color: #fff;
 }
 
 #roomStats {
     width: 100%;
     text-align: right;
+    color: #fff;
 }
 
 #roomStats b {
     margin-right: 20px;
+    color: #fff;
 }
 
 .splitchattable, .splitstatetable {
@@ -51,30 +59,36 @@ a {
 
 .containerheader {
     text-align: center;
+    color: #fff;
 }
 
 .chatcontainer, .giftcontainer, .eventcontainer {
     overflow-y: scroll;
     height: calc(100vh - 240px);
     word-wrap: break-word;
+    color: #fff;
 }
 
 .eventcontainer {
     height: calc(100vh - 90px);
+    color: #fff;
 }
 
 .chatcontainer {
     min-width: 400px;
     max-width: calc(100vw - 430px);
+    color: #fff;
 }
 
 .giftcontainer {
     min-width: 400px;
+    color: #fff;
 }
 
 .miniprofilepicture {
     height: 20px;
     width: 20px;
+    color: #fff;
 }
 
 .gifticon {

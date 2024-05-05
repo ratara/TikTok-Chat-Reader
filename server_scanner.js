@@ -8,21 +8,9 @@ const { clientBlocked } = require('./limiter');
 const { time } = require('console');
 
 const app = express();
-const httpServer = createServer(app);
 
 let viewerCount = 0;
 let likeCount = 0;
-
-// global file path prefix that is used within a session to log different
-// files with the same prefix. timestamp_streamer_<eventtype>
-let filePath = "";
-
-// Enable cross origin resource sharing
-const io = new Server(httpServer, {
-    cors: {
-        origin: '*'
-    }
-});
 
 /**
  * Formats the given timestamp into a string representation for a file name.
@@ -41,46 +29,31 @@ function formatDateTime(date)
     return `${year}_${month}_${day}_${hours}_${minutes}_${seconds}`;
 }
 
-io.on('connection', (socket) => {
+function scanHost(host)
+{
     let tiktokConnectionWrapper;
     
-    console.info('New connection from origin', socket.handshake.headers['origin'] || socket.handshake.headers['referer']);
-
-    socket.on('setUniqueId', (uniqueId, options) => {
-        
+    {
         // generate file path prefix for this session
         const time = new Date();
-        const basePath = "/Users/daniel/Desktop/PyCharm/scrape/sick/";
-        filePath = basePath + formatDateTime(time) + "_" + uniqueId;
-
-        // Prohibit the client from specifying these options (for security reasons)
-        if (typeof options === 'object' && options) {
-            delete options.requestOptions;
-            delete options.websocketOptions;
-        } else {
-            options = {};
-        }
-
-        // Session ID in .env file is optional
-        if (process.env.SESSIONID) {
-            options.sessionId = process.env.SESSIONID;
-            console.info('Using SessionId');
-        }
-
-        // Check if rate limit exceeded
-        if (process.env.ENABLE_RATE_LIMIT && clientBlocked(io, socket)) {
-            socket.emit('tiktokDisconnected', 'You have opened too many connections or made too many connection requests. Please reduce the number of connections/requests or host your own server instance. The connections are limited to avoid that the server IP gets blocked by TokTok.');
-            return;
-        }
+        // const basePath = "/Users/daniel/Desktop/PyCharm/scrape/sick/";
+        const basePath = "/home/ralf/Dokumente/log/";
+        let filePath = basePath + formatDateTime(time) + "_" + host.uniqueId;
 
         // Connect to the given username (uniqueId)
         try {
-            tiktokConnectionWrapper = new TikTokConnectionWrapper(uniqueId, options, true);
+            options = {};
+            tiktokConnectionWrapper = new TikTokConnectionWrapper(host.uniqueId, options, true);
             tiktokConnectionWrapper.connect();
         } catch (err) {
-            socket.emit('tiktokDisconnected', err.toString());
+            console.error(err.toString());
             return;
         }
+        
+        tiktokConnectionWrapper.on("disconnected", (msg) => {
+            console.info(msg + " 1");
+            host.isOnline = false;
+        });
 
         // viewer stats
         tiktokConnectionWrapper.connection.on('roomUser', (msg) => {
@@ -95,42 +68,38 @@ io.on('connection', (socket) => {
             }
          })
 
-        // Redirect wrapper control events once
-        tiktokConnectionWrapper.once('connected', state => socket.emit('tiktokConnected', state));
-        tiktokConnectionWrapper.once('disconnected', reason => 
-        socket.emit('tiktokDisconnected', reason));
-
         // Notify client when stream ends
-        tiktokConnectionWrapper.connection.on('streamEnd', () => socket.emit('streamEnd'));
+        tiktokConnectionWrapper.connection.on('streamEnd', () => {
+            console.info('streamEnd');
+            tiktokConnectionWrapper.disconnect();
+        });
 
         // Redirect message events
-        tiktokConnectionWrapper.connection.on('roomUser', msg => 
-        socket.emit('roomUser', msg));
+        //tiktokConnectionWrapper.connection.on('roomUser', msg => console());
         // Enters the room
         tiktokConnectionWrapper.connection.on('member', msg => {
-            socket.emit('member', msg);
-            writeMemberEventToFile(msg);
+            //socket.emit('member', msg);
+            writeMemberEventToFile(filePath, msg);
         });
         tiktokConnectionWrapper.connection.on('chat', msg => {
-            socket.emit('chat', msg);
-            writeChatEventToFile(msg);
+            //socket.emit('chat', msg);
+            writeChatEventToFile(filePath, msg);
         });
         tiktokConnectionWrapper.connection.on('gift', msg => {
-            socket.emit('gift', msg);
-            writeGiftEventToFile(msg);
+            //socket.emit('gift', msg);
+            writeGiftEventToFile(filePath, msg);
         });
         // Shares the Live
-        tiktokConnectionWrapper.connection.on('social', 
-        msg => socket.emit('social', msg));
+       /*  tiktokConnectionWrapper.connection.on('social', 
+        msg => socket.emit('social', msg)); */
         // Likes the Live
         tiktokConnectionWrapper.connection.on('like', msg => {
-            socket.emit('like', msg);
-            writeLikeEventToFile(msg);
+            writeLikeEventToFile(filePath, msg);
             if (typeof msg.totalLikeCount === 'number') {
                 likeCount = msg.totalLikeCount;
             }
         });
-        tiktokConnectionWrapper.connection.on('questionNew', msg => socket.emit('questionNew', msg));
+/*         tiktokConnectionWrapper.connection.on('questionNew', msg => socket.emit('questionNew', msg));
         tiktokConnectionWrapper.connection.on('linkMicBattle', msg => socket.emit('linkMicBattle', msg));
         tiktokConnectionWrapper.connection.on('linkMicArmies', msg => socket.emit('linkMicArmies', msg));
         // Live Intro / About Me
@@ -139,15 +108,9 @@ io.on('connection', (socket) => {
         socket.emit('emote', msg));
         // Kiste
         tiktokConnectionWrapper.connection.on('envelope', msg => socket.emit('envelope', msg));
-        tiktokConnectionWrapper.connection.on('subscribe', msg => socket.emit('subscribe', msg));
-    });
-
-    socket.on('disconnect', () => {
-        if (tiktokConnectionWrapper) {
-            tiktokConnectionWrapper.disconnect();
-        }
-    });
-});
+        tiktokConnectionWrapper.connection.on('subscribe', msg => socket.emit('subscribe', msg)); */
+    }
+};
 
 //------------------------------------------------------------------------------
 
@@ -155,7 +118,7 @@ io.on('connection', (socket) => {
  * Logs a chat event to file.
  * @param chatEvent {object} tiktok chat event
  */
-function writeChatEventToFile(chatEvent){
+function writeChatEventToFile(filePath, chatEvent){
     const fs = require('fs');
 
     try {
@@ -174,7 +137,7 @@ function writeChatEventToFile(chatEvent){
  * Logs a gift event to file.
  * @param giftEvent {object} tiktok gift event
  */
-function writeGiftEventToFile(giftEvent){
+function writeGiftEventToFile(filePath, giftEvent){
     const fs = require('fs');
 
     try {
@@ -196,7 +159,7 @@ function writeGiftEventToFile(giftEvent){
  * Logs a gift event to file.
  * @param likeEvent {object} tiktok like event
  */
-function writeLikeEventToFile(likeEvent){
+function writeLikeEventToFile(filePath, likeEvent){
     const fs = require('fs');
 
     try {
@@ -216,7 +179,7 @@ function writeLikeEventToFile(likeEvent){
  * Logs a chat event to file.
  * @param memberEvent {object} tiktok member event
  */
-function writeMemberEventToFile(memberEvent){
+function writeMemberEventToFile(filePath, memberEvent){
     const fs = require('fs');
 
     try {
@@ -247,20 +210,51 @@ function writeMemberEventToFile(memberEvent){
 //    }
 // }
 
+/// @brief 
+class Host
+{
+    constructor(uniqueId)
+    {
+        this.uniqueId = uniqueId;
+        this.isOnline = false;
+    }
+};
+
+const sleepNow = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 //------------------------------------------------------------------------------
 
-
-
-// Emit global connection statistics
-setInterval(() => {
-    io.emit('statistic', { globalConnectionCount: getGlobalConnectionCount() });
-}, 5000)
-
 // Serve frontend files
 app.use(express.static('public'));
+// set up host to spy on
+let hosts = [
+    new Host('_._anthony_._._'),
+    new Host('sick1.0.0'),
+    new Host('ralf_005')
+];
 
-// Start http listener
-const port = process.env.PORT || 8089;
-httpServer.listen(port);
-console.info(`Server running! Please visit http://localhost:${port}`);
+async function start()
+{
+    let quit = false;
+    while(!quit)
+    {
+        hosts.forEach((host) => {
+            if (!host.isOnline)
+            {
+                try
+                {
+                    scanHost(host);
+                    host.isOnline = true;
+                }
+                catch (error) {
+                    console.info("Host not online: " + host.uniqueId);
+                }
+            }
+        });
+        await sleepNow(10000);
+    }
+}
+
+start();
+
+console.info(`Server running! I can see you!`);
