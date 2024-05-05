@@ -22,8 +22,10 @@ class TikTokIOConnection {
         })
 
         this.socket.on('streamEnd', () => {
-            console.warn("LIVE has ended!");
+            const error = "LIVE has ended!";
+            console.warn(error);
             this.uniqueId = null;
+            throw error;
         })
 
         this.socket.on('tiktokDisconnected', (errMsg) => {

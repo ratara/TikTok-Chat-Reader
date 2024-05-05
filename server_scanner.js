@@ -29,37 +29,31 @@ function formatDateTime(date)
     return `${year}_${month}_${day}_${hours}_${minutes}_${seconds}`;
 }
 
-function scanHost(uniqueId)
+function scanHost(host)
 {
     let tiktokConnectionWrapper;
     
     {
         // generate file path prefix for this session
         const time = new Date();
-        const basePath = "/Users/daniel/Desktop/PyCharm/scrape/sick/";
-        let filePath = basePath + formatDateTime(time) + "_" + uniqueId;
-
-        // Session ID in .env file is optional
-        /* if (process.env.SESSIONID) {
-            options.sessionId = process.env.SESSIONID;
-            console.info('Using SessionId');
-        } */
-
-     /*    // Check if rate limit exceeded
-        if (process.env.ENABLE_RATE_LIMIT && clientBlocked(io, socket)) {
-            socket.emit('tiktokDisconnected', 'You have opened too many connections or made too many connection requests. Please reduce the number of connections/requests or host your own server instance. The connections are limited to avoid that the server IP gets blocked by TokTok.');
-            return;
-        } */
+        // const basePath = "/Users/daniel/Desktop/PyCharm/scrape/sick/";
+        const basePath = "/home/ralf/Dokumente/log/";
+        let filePath = basePath + formatDateTime(time) + "_" + host.uniqueId;
 
         // Connect to the given username (uniqueId)
         try {
             options = {};
-            tiktokConnectionWrapper = new TikTokConnectionWrapper(uniqueId, options, true);
+            tiktokConnectionWrapper = new TikTokConnectionWrapper(host.uniqueId, options, true);
             tiktokConnectionWrapper.connect();
         } catch (err) {
             console.error(err.toString());
             return;
         }
+        
+        tiktokConnectionWrapper.on("disconnected", (msg) => {
+            console.info(msg + " 1");
+            host.isOnline = false;
+        });
 
         // viewer stats
         tiktokConnectionWrapper.connection.on('roomUser', (msg) => {
@@ -216,12 +210,51 @@ function writeMemberEventToFile(filePath, memberEvent){
 //    }
 // }
 
+/// @brief 
+class Host
+{
+    constructor(uniqueId)
+    {
+        this.uniqueId = uniqueId;
+        this.isOnline = false;
+    }
+};
+
+const sleepNow = (delay) => new Promise((resolve) => setTimeout(resolve, delay))
 
 //------------------------------------------------------------------------------
 
 // Serve frontend files
 app.use(express.static('public'));
+// set up host to spy on
+let hosts = [
+    new Host('_._anthony_._._'),
+    new Host('sick1.0.0'),
+    new Host('ralf_005')
+];
+
+async function start()
+{
+    let quit = false;
+    while(!quit)
+    {
+        hosts.forEach((host) => {
+            if (!host.isOnline)
+            {
+                try
+                {
+                    scanHost(host);
+                    host.isOnline = true;
+                }
+                catch (error) {
+                    console.info("Host not online: " + host.uniqueId);
+                }
+            }
+        });
+        await sleepNow(10000);
+    }
+}
+
+start();
 
 console.info(`Server running! I can see you!`);
-scanHost('netti_halt2007');
-scanHost('uelmen_live');
